@@ -1,0 +1,142 @@
+import string 
+import re
+import codecs
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn import feature_extraction
+from sklearn import linear_model
+from sklearn import pipeline
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+eng_df=pd.read_csv("ngrams\\english.txt","utf-8",header=None, names=["English"],engine="python")
+eng_df.head()
+
+ger_df=pd.read_csv("ngrams\\german.txt","utf-8",header=None, names=["German"],engine="python")
+ger_df.head()
+
+spa_df=pd.read_csv("ngrams\\spanish.txt","utf-8",header=None, names=["Spanish"],engine="python")
+spa_df.head()
+
+fer_df=pd.read_csv("ngrams\\french.txt","utf-8",header=None, names=["French"],engine="python")
+fer_df.head()
+
+por_df=pd.read_csv("ngrams\\portuguese.txt","utf-8",header=None, names=["Portuguese"],engine="python")
+por_df.head()
+
+ita_df=pd.read_csv("ngrams\\italian.txt","utf-8",header=None, names=["Italian"],engine="python")
+ita_df.head()
+
+for char in string.punctuation:
+    print(char,end=" ")
+translate_table=dict((ord(char),None) for char in string.punctuation)
+
+data_eng=[]
+lang_eng=[]
+for i,line in eng_df.iterrows():
+    line=line["English"]
+    if len(line)!=0:
+        line=line.lower()
+        line=re.sub(r"\d+","",line)
+        line=line.translate(translate_table)
+        data_eng.append(line)
+        lang_eng.append("English")
+
+data_ger=[]
+lang_ger=[]
+for i,line in ger_df.iterrows():
+    line=line["German"]
+    if len(line)!=0:
+        line=line.lower()
+        line=re.sub(r"\d+","",line)
+        line=line.translate(translate_table)
+        data_ger.append(line)
+        lang_ger.append("German")
+
+data_spa=[]
+lang_spa=[]
+for i,line in spa_df.iterrows():
+    line=line["Spanish"]
+    if len(line)!=0:
+        line=line.lower()
+        line=re.sub(r"\d+","",line)
+        line=line.translate(translate_table)
+        data_spa.append(line)
+        lang_spa.append("Spanish")
+
+data_por=[]
+lang_por=[]
+for i,line in por_df.iterrows():
+    line=line["Portuguese"]
+    if len(line)!=0:
+        line=line.lower()
+        line=re.sub(r"\d+","",line)
+        line=line.translate(translate_table)
+        data_por.append(line)
+        lang_por.append("Portuguese")
+
+data_ita=[]
+lang_ita=[]
+for i,line in ita_df.iterrows():
+    line=line["Italian"]
+    if len(line)!=0:
+        line=line.lower()
+        line=re.sub(r"\d+","",line)
+        line=line.translate(translate_table)
+        data_ita.append(line)
+        lang_ita.append("Italian")
+
+data_fre=[]
+lang_fre=[]
+for i,line in fer_df.iterrows():
+    line=line["French"]
+    if len(line)!=0:
+        line=line.lower()
+        line=re.sub(r"\d+","",line)
+        line=line.translate(translate_table)
+        data_fre.append(line)
+        lang_fre.append("French")
+
+df=pd.DataFrame({"Text":data_eng+data_fre+data_spa+data_por+data_ita+data_ger,
+                "Language":lang_eng+lang_fre+lang_ger+lang_spa+lang_ita+lang_por})
+print(df.shape)
+
+X,y=df.iloc[:,0],df.iloc[:,1]
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=0)
+print(X_train.shape)
+print(X_test.shape)
+print(y_train.shape)
+print(y_test.shape)
+
+vectorizer=feature_extraction.text.TfidfVectorizer(ngram_range=(1,3),analyzer="char")
+pipe_lr_r13=pipeline.Pipeline([
+    ("vectorizer",vectorizer),
+    ("clf",linear_model.LogisticRegression())
+])
+
+pipe_lr_r13.fit(X_train,y_train)
+
+y_predicted=pipe_lr_r13.predict(X_test)
+
+acc=(metrics.accuracy_score(y_test,y_predicted))*100
+print(acc,"%")
+
+matrix=metrics.confusion_matrix(y_test,y_predicted)
+print("Confusion Matrix:\n",matrix)
+
+def languageDetect(text):
+    import numpy as np
+    import string
+    import re
+    translate_table=dict((ord(char),None) for char in string.punctuation)
+    text="".join(text.split())
+    text=text.lower()
+    text=re.sub(r"\d+","",text)
+    text=text.translate(translate_table)
+    pred=pipe_lr_r13.predict([text])
+    prob=pipe_lr_r13.predict_proba([text])
+    return pred[0]
+
+languageDetect("Hello world")
